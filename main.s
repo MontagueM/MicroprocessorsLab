@@ -8,10 +8,18 @@ main:
 
 	org	0x100		    ; Main code starts here at address 0x100
 start:
+	movlw	0x0
+	movwf	TRISE, A
+	movlw	0xFF
+	movwf   TRISD, A
 	movlw 	0x0
 	movwf	TRISC, A	    ; Port C all outputs
 	bra 	test
 loop:
+	movf	0x08, W
+	iorwf	PORTD, 0, 0
+	movwf	0x08, A
+	movwf	PORTE, A
 	movff 	0x06, PORTC
 	incf 	0x06, W, A
 test:
