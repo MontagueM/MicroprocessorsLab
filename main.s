@@ -17,7 +17,8 @@ start:
 	bra 	test
 loop:
 	movf	0x08, W
-	iorwf	PORTD, 0, 0
+	xorwf	PORTD, 0, 0
+	//BTG	0x08, W, 0
 	movwf	0x08, A
 	movwf	PORTE, A
 	movff 	0x06, PORTC
