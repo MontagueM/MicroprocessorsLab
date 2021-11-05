@@ -1,68 +1,56 @@
 	#include <xc.inc>
-
+	
 psect	code, abs
-	
 main:
-	org	0x0
+	org 0x0
+	goto	setup
+	
+	org 0x100		    ; Main code starts here at address 0x100
+
+	; ******* Programme FLASH read Setup Code ****  
+setup:	
+	bcf	CFGS	; point to Flash program memory  
+	bsf	EEPGD 	; access Flash program memory
 	goto	start
+	; ******* My data and where to put it in RAM *
+myTable:
+	;db	0x66, 0x66, 0x66 ; 1
+	db	0xF8, 0x42, 0x1F ; 2
+	;db	0x15, 0x5F, 0xF4 ; 4
+	myArray EQU 0x400	; Address in RAM for data
+	;counter EQU 0x10	; Address of counter variable
+	align	2		; ensure alignment of subsequent instructions
+	; SET ALL PORTS TO OPEN
 
-	org	0x100		    ; Main code starts here at address 0x100
-start:
-	//movlw	0x0
-	//movwf	TRISE, A
-	//movlw	0xFF
-	//movwf   TRISD, A
-	movlw 	0x0
+	; ******* Main programme *********************
+start:	
+    
+    	movlw 	0x0
 	movwf	TRISC, A	    ; Port C all outputs
-	c1 EQU 0x10
- 	c2 EQU 0x11
- 	c3 EQU 0x12
- 	movlw 0xFF
-	movwf c1, A
-
-
-	movlw 0x0
-	bra 	test
-
-delay1:
-    	movlw 0x7F
-	movwf c2, A
-	call	delay2
-	decfsz	c1, A
-	bra	delay1
-	return
-	
-delay2:
-	; 1 + 1 + 2 + 1 + 2 + 2 = 9 (loop is 
-    	movlw 0xAF
-	movwf c3, A
-	call	delay3
-	decfsz	c2, A
-	bra	delay2
-	return
-	
-	
-delay3:
-	; 1 + 2 + 2 = 5 (loop is 1 + 2 = 3)
-	decfsz	c3, A
-	bra	delay3
-	return
-	
-	
+	movlw 	0x0
+	movwf	TRISD, A	    ; Port D all outputs
+	movlw 	0x0
+	movwf	TRISE, A	    ; Port E all outputs
+    
+	lfsr	0, myArray	; Load FSR0 with address in RAM	
+	movlw	low highword(myTable)	; address of data in PM
+	movwf	TBLPTRU, A	; load upper bits to TBLPTRU
+	movlw	high(myTable)	; address of data in PM
+	movwf	TBLPTRH, A	; load high byte to TBLPTRH
+	movlw	low(myTable)	; address of data in PM
+	movwf	TBLPTRL, A	; load low byte to TBLPTRL
+	;movlw	22		; 22 bytes to read
+	;movwf 	counter, A	; our counter register
 loop:
-	//movf	0x08, W
-	//xorwf	PORTD, 0, 0
-	//BTG	0x08, W, 0
-	//movwf	0x08, A
-	//movwf	PORTE, A
-	call delay1
-	movff 	0x06, PORTC
-	incf 	0x06, W, A
-test:
-	movwf	0x06, A	    ; Test for end of loop condition
-	movlw 	0x63
-	cpfsgt 	0x06, A
-	bra 	loop		    ; Not yet finished goto start of loop again
-	goto 	0x0		    ; Re-run program from start
+        tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
+	movff	TABLAT, PORTC	
+	tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
+	movff	TABLAT, PORTD		
+	tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
+	movff	TABLAT, PORTE	
+	;decfsz	counter, A	; count down to zero
+	;bra	loop		; keep going until finished
+	
+	goto	0
 
 	end	main
