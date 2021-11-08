@@ -26,6 +26,7 @@ myTable:
 	db	0xf9, 0x9f, 0x88 ; 9
 	myArray EQU 0x400	; Address in RAM for data
 	counter EQU 0x20	; Address of counter variable
+   	c1 EQU 0x10
   	c2 EQU 0x11
  	c3 EQU 0x12
 	align	2		; ensure alignment of subsequent instructions
@@ -52,6 +53,14 @@ start:
 	movwf 	counter, A	; our counter register
 	bra loop
 	
+delay1:
+    	movlw 0xFF
+	movwf c2, A
+	call	delay2
+	decfsz	c1, A
+	bra	delay1
+	return
+	
 delay2:
 	; 1 + 1 + 2 + 1 + 2 + 2 = 9 (loop is 
     	movlw 0xFF
@@ -69,98 +78,9 @@ delay3:
 	return
 
 loop:
-	movlw 0xFF
-	movwf c2, A
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-		call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-		call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
-	call delay2
+	movlw 0x5A
+	movwf c1, A
+	call delay1
         tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
 	movff	TABLAT, PORTC	
 	tblrd*+			; move one byte from PM to TABLAT, increment TBLPRT
