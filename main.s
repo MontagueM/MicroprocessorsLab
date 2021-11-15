@@ -13,9 +13,10 @@ myArray:    ds 0x80 ; reserve 128 bytes for message data
 psect	data    
 	; ******* myTable, data in programme memory, and its length *****
 myTable:
-	db	'H','e','l','l','o',' ','W','o','r','l','d','!','a','b','c','d','e','f','g','h','i','j','k','!',0x0a
+	;db	'H','e','l','l','o',' ','W','o','r','l','d','!','a','b','c','d','e','f','g','h','i','j','k','!',0x0a
+	db	'T','h','e',' ','w','o','r','d',' ','o','f',' ','t','h','e',' ','d','a','y',' ','i','s',' ','a','n','c','i','e','n','t','.',0x0a
 					; message, plus carriage return
-	myTable_l   EQU	30	; length of data
+	myTable_l   EQU	32	; length of data
 	align	2
     
 psect	code, abs	
@@ -34,11 +35,13 @@ doTwoLoops:
 	movlw	0x10
 	lfsr	2, myArray
 	call	LCD_Write_Message
-	movlw	0x5
+	movlw	0x10
 	subwfb	myTable__1, 1, 1
 	movlw	11000000B	; Function set 4-bit
 	;movlw	11000000B	; Function set 4-bit
 	call	LCD_Send_Byte_I
+	tblrd*-
+	incf	myTable__1, 1
 
 	return
 
@@ -57,8 +60,8 @@ start: 	lfsr	0, myArray	; Load FSR0 with address in RAM
 	call	doTwoLoops
 	;movlw	myTable__1
 	
-	;addlw	0xff		; don't send the final carriage return to LCD
-	movlw	myTable__1
+	addlw	0xff		; don't send the final carriage return to LCD
+	movf	myTable__1, 0
 	call	LCD_Write_Message
 	
 	
