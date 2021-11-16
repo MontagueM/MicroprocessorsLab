@@ -64,7 +64,7 @@ Keyboard_Setup:
 	movf	KB_col, 0
 	addwf	KB_fin
 	movff	KB_fin, PORTD
-	
+	movf	KB_fin, 0  ; store KB_fin in w reg for later use
 	return
 
 	

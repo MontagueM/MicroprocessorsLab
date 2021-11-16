@@ -55,6 +55,8 @@ LCD_Loop_message:
 	call    LCD_Send_Byte_D
 	decfsz  LCD_counter, A
 	bra	LCD_Loop_message
+	movlw	2000
+	call	LCD_delay_ms
 	return
 
 LCD_Send_Byte_I:	    ; Transmits byte stored in W to instruction reg
