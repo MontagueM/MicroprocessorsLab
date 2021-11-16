@@ -12,6 +12,12 @@ LCD_cnt_ms:	ds 1   ; reserve 1 byte for ms counter
 psect	kb_code,class=CODE
     
 Keyboard_Setup:
+	movlw	0
+	movwf	KB_row
+	movlw	0
+	movwf	KB_col
+	
+    
 	banksel PADCFG1
 	bsf	REPU
 	clrf	LATE, A
@@ -21,7 +27,7 @@ Keyboard_Setup:
 	movwf	TRISE
 	
 	; delay?
-	movlw	5
+	movlw	1
 	call	LCD_delay_ms
 	
 	; Drive output bits low all at once
@@ -35,12 +41,17 @@ Keyboard_Setup:
 	movlw	0x0F
 	xorwf	KB_col, 1, 0
 	
+	; If no column pressed return
+	movlw	0x00
+	cpfsgt	KB_col
+	return
+	
 	
 	; Configure bits 0-3 output, 4-7 input
 	movlw	0xF0
 	movwf	TRISE
 	
-	movlw	5
+	movlw	1
 	call	LCD_delay_ms
 	
 	; Drive output bits low all at once
