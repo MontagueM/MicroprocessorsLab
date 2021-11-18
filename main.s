@@ -29,8 +29,56 @@ setup:	bcf	CFGS	; point to Flash program memory
 	call	UART_Setup	; setup UART
 	call	LCD_Setup	; setup UART
 	call	ADC_Setup	; setup ADC
+	call	SetupMultiply
+	goto	Multiply16x16
+	goto	gend
 	goto	start
+
+SetupMultiply:
+	movlw	0xAB
+	movwf	ARG1L
+	movlw	0xCD
+	movwf	ARG1H
+	movlw	0x12
+	movwf	ARG2L
+	movlw	0x34
+	movwf	ARG2H
+	return
 	
+Multiply16x16:
+	MOVF ARG1L, W
+	MULWF ARG2L ; ARG1L * ARG2L->
+	; PRODH:PRODL
+	MOVFF PRODH, RES1 ;
+	MOVFF PRODL, RES0 ;
+	;
+	MOVF ARG1H, W
+	MULWF ARG2H ; ARG1H * ARG2H->
+	; PRODH:PRODL
+	MOVFF PRODH, RES3 ;
+	MOVFF PRODL, RES2 ;
+	;
+	MOVF ARG1L, W
+	MULWF ARG2H ; ARG1L * ARG2H->
+	; PRODH:PRODL
+	MOVF PRODL, W ;
+	ADDWF RES1, F ; Add cross
+	MOVF PRODH, W ; products
+	ADDWFC RES2, F ;
+	CLRF WREG ;
+	ADDWFC RES3, F ;
+	;
+	MOVF ARG1H, W ;
+	MULWF ARG2L ; ARG1H * ARG2L->
+	; PRODH:PRODL
+	MOVF PRODL, W ;
+	ADDWF RES1, F ; Add cross
+	MOVF PRODH, W ; products
+	ADDWFC RES2, F ;
+	CLRF WREG ;
+	ADDWFC RES3, F ; 
+	return
+
 	; ******* Main programme ****************************************
 start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
 	movlw	low highword(myTable)	; address of data in PM
@@ -50,7 +98,7 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	lfsr	2, myArray
 	call	UART_Transmit_Message
 
-	movlw	myTable_l-1	; output message to LCD
+	movlw	myTable_l	; output message to LCD
 				; don't send the final carriage return to LCD
 	lfsr	2, myArray
 	call	LCD_Write_Message
@@ -67,5 +115,5 @@ measure_loop:
 delay:	decfsz	delay_count, A	; decrement until zero
 	bra	delay
 	return
-
+gend:
 	end	rst
