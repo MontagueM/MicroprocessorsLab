@@ -28,6 +28,10 @@ myTable:
 	RES1	EQU 0x29
 	RES2	EQU 0x2A
 	RES3	EQU 0x2B
+	DIG0	EQU 0x30
+	DIG1	EQU 0x31
+	DIG2	EQU 0x32
+	DIG3	EQU 0x33
     
 psect	code, abs	
 rst: 	org 0x0
@@ -41,32 +45,19 @@ setup:	bcf	CFGS	; point to Flash program memory
 	call	ADC_Setup	; setup ADC
 	;call	SetupMultiply16x16
 	;call	Multiply16x16
-	call	SetupMultiply8x24
-	call	Multiply8x24
-	goto	gend
-	;goto	start
+	;call	SetupMultiply8x24
+	;call	Multiply8x24
+	;goto	gend
+	goto	start
 
 SetupMultiply16x16:
-	movlw	0xCD
-	movwf	ARG1L
-	movlw	0xAB
-	movwf	ARG1H
-	movlw	0x34
+	movff	ADRESL, ARG1L	
+	movff	ADRESH, ARG1H
+	movlw	0x8a
 	movwf	ARG2L
-	movlw	0x12
+	movlw	0x41
 	movwf	ARG2H
 	return
-
-SetupMultiply8x24:
-	movlw	0xCD
-	movwf	ARG1L
-	movlw	0x56 
-	movwf	ARG2L
-	movlw	0x34
-	movwf	ARG2H
-	movlw	0x12
-	movwf	ARG2U
-	return	
 
 Multiply16x16:
 	MOVF ARG1L, W
@@ -106,26 +97,81 @@ Multiply8x24:
 	MOVF ARG1L, W
 	MULWF ARG2L ; ARG1L * ARG2L->
 	; PRODH:PRODL
-	MOVFF PRODH, RES1 ;
+	MOVFF PRODH, RES1 ; 
 	MOVFF PRODL, RES0 ;
 	;
 	MOVF ARG1L, W
 	MULWF ARG2H ; ARG1H * ARG2H->
 	; PRODH:PRODL
 	MOVF PRODL, W
-	ADDWF RES1, F
+	ADDWF RES1, F	; PRODL + RES1--> RES1
 	MOVFF PRODH, RES2 ;
-	
+	; 
 	MOVF ARG1L, W
 	MULWF ARG2U ; ARG1H * ARG2H->
 	; PRODH:PRODL
 	MOVF PRODL, W
-	ADDWFC RES2, F
+	ADDWFC RES2, F ; PRODL + RES2 + carry bit --> RES2
 	MOVLW 0x0
-	ADDWFC	PRODH, F
-	MOVFF PRODH, RES3 ;
+	ADDWFC	PRODH, F ; add the carry bit to RES3 (highest byte)
+	MOVFF PRODH, RES3 ; 
 	return
+
+GetDigits:
+	; Setup 16x16
+	call	SetupMultiply16x16
+	; Do 16x16 mult
+	call	Multiply16x16
+	; Set first digit
+	movf	RES3, W
+	movwf	DIG0, F
+
+	; Setup 8x24
+	movlw	0x0A
+	movwf	ARG1L, F
 	
+	movf	RES0, W
+	movwf	ARG2L, F
+	movf	RES1, W
+	movwf	ARG2H, F
+	movf	RES2, W
+	movwf	ARG2U, F
+	; Do 8x24 mult and set each digit three times
+	call	Multiply8x24
+	;  set digit
+	movf	RES3, W
+	movwf	DIG1, F
+	
+	movf	RES0, W
+	movwf	ARG2L, F
+	movf	RES1, W
+	movwf	ARG2H, F
+	movf	RES2, W
+	movwf	ARG2U, F
+	call	Multiply8x24
+	;  set digit
+	movf	RES3, W
+	movwf	DIG2, F
+	
+	movf	RES0, W
+	movwf	ARG2L, F
+	movf	RES1, W
+	movwf	ARG2H, F
+	movf	RES2, W
+	movwf	ARG2U, F
+	call	Multiply8x24
+	;  set digit
+	movf	RES3, W
+	movwf	DIG3, F
+	
+	; Convert to ASCII
+	movlw	48
+	addwf	DIG0, F
+	addwf	DIG1, F
+	addwf	DIG2, F
+	addwf	DIG3, F
+	
+
 	; ******* Main programme ****************************************
 start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
 	movlw	low highword(myTable)	; address of data in PM
@@ -136,6 +182,12 @@ start: 	lfsr	0, myArray	; Load FSR0 with address in RAM
 	movwf	TBLPTRL, A		; load low byte to TBLPTRL
 	movlw	myTable_l	; bytes to read
 	movwf 	counter, A		; our counter register
+	
+	; Calculate digits from hex value
+	call	GetDigits
+	call	gend
+	
+	
 loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	movff	TABLAT, POSTINC0; move data from TABLAT to (FSR0), inc FSR0	
 	decfsz	counter, A		; count down to zero
@@ -147,15 +199,19 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 
 	movlw	myTable_l	; output message to LCD
 				; don't send the final carriage return to LCD
-	lfsr	2, myArray
+	movlw	4
+	lfsr	2, DIG0
 	call	LCD_Write_Message
 	
 measure_loop:
 	call	ADC_Read
-	movf	ADRESH, W, A
-	call	LCD_Write_Hex
-	movf	ADRESL, W, A
-	call	LCD_Write_Hex
+	
+	call	GetDigits
+	   
+	movlw	4
+	lfsr	2, DIG0
+	call	LCD_Write_Message
+	
 	goto	measure_loop		; goto current line in code
 	
 	; a delay subroutine if you need one, times around loop in delay_count
