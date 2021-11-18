@@ -7,6 +7,7 @@ extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
 delay_count:ds 1    ; reserve one byte for counter in the delay routine
+
     
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -18,6 +19,15 @@ myTable:
 					; message, plus carriage return
 	myTable_l   EQU	13	; length of data
 	align	2
+	ARG1L	EQU 0x20
+	ARG1H	EQU 0x21
+	ARG2L	EQU 0x22
+	ARG2H	EQU 0x23
+	ARG2U	EQU 0x24
+	RES0	EQU 0x28
+	RES1	EQU 0x29
+	RES2	EQU 0x2A
+	RES3	EQU 0x2B
     
 psect	code, abs	
 rst: 	org 0x0
@@ -29,22 +39,35 @@ setup:	bcf	CFGS	; point to Flash program memory
 	call	UART_Setup	; setup UART
 	call	LCD_Setup	; setup UART
 	call	ADC_Setup	; setup ADC
-	call	SetupMultiply
-	goto	Multiply16x16
+	;call	SetupMultiply16x16
+	;call	Multiply16x16
+	call	SetupMultiply8x24
+	call	Multiply8x24
 	goto	gend
-	goto	start
+	;goto	start
 
-SetupMultiply:
-	movlw	0xAB
-	movwf	ARG1L
+SetupMultiply16x16:
 	movlw	0xCD
+	movwf	ARG1L
+	movlw	0xAB
 	movwf	ARG1H
+	movlw	0x34
+	movwf	ARG2L
 	movlw	0x12
+	movwf	ARG2H
+	return
+
+SetupMultiply8x24:
+	movlw	0xCD
+	movwf	ARG1L
+	movlw	0x56 
 	movwf	ARG2L
 	movlw	0x34
 	movwf	ARG2H
-	return
-	
+	movlw	0x12
+	movwf	ARG2U
+	return	
+
 Multiply16x16:
 	MOVF ARG1L, W
 	MULWF ARG2L ; ARG1L * ARG2L->
@@ -79,6 +102,30 @@ Multiply16x16:
 	ADDWFC RES3, F ; 
 	return
 
+Multiply8x24:
+	MOVF ARG1L, W
+	MULWF ARG2L ; ARG1L * ARG2L->
+	; PRODH:PRODL
+	MOVFF PRODH, RES1 ;
+	MOVFF PRODL, RES0 ;
+	;
+	MOVF ARG1L, W
+	MULWF ARG2H ; ARG1H * ARG2H->
+	; PRODH:PRODL
+	MOVF PRODL, W
+	ADDWF RES1, F
+	MOVFF PRODH, RES2 ;
+	
+	MOVF ARG1L, W
+	MULWF ARG2U ; ARG1H * ARG2H->
+	; PRODH:PRODL
+	MOVF PRODL, W
+	ADDWFC RES2, F
+	MOVLW 0x0
+	ADDWFC	PRODH, F
+	MOVFF PRODH, RES3 ;
+	return
+	
 	; ******* Main programme ****************************************
 start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
 	movlw	low highword(myTable)	; address of data in PM
