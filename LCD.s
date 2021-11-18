@@ -8,6 +8,7 @@ LCD_cnt_h:	ds 1   ; reserve 1 byte for variable LCD_cnt_h
 LCD_cnt_ms:	ds 1   ; reserve 1 byte for ms counter
 LCD_tmp:	ds 1   ; reserve 1 byte for temporary use
 LCD_counter:	ds 1   ; reserve 1 byte for counting through nessage
+TwoLineCounter: ds 1
 
 	LCD_E	EQU 5	; LCD enable bit
     	LCD_RS	EQU 4	; LCD register select bit
@@ -44,6 +45,8 @@ LCD_Setup:
 	call	LCD_Send_Byte_I
 	movlw	10		; wait 40us
 	call	LCD_delay_x4us
+	movlw	0x10
+	movwf	TwoLineCounter, A
 	return
 
 LCD_Write_Message:	    ; Message stored at FSR2, length stored in W
@@ -57,8 +60,15 @@ LCD_Loop_message:
 	bra	LCD_Loop_message
 	movlw	2000
 	call	LCD_delay_ms
+	dcfsnz	TwoLineCounter, A
+	bra	SetTwoLines
 	return
 
+SetTwoLines:
+	movlw	11000000B
+	call	LCD_Send_Byte_I
+	return
+	
 LCD_Send_Byte_I:	    ; Transmits byte stored in W to instruction reg
 	movwf   LCD_tmp, A
 	swapf   LCD_tmp, W, A   ; swap nibbles, high nibble goes first
