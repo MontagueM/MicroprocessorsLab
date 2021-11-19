@@ -208,15 +208,21 @@ run:
 
 measure_loop:
 	call	ADC_Read
-	movlw	200
+	movlw	100
 	call	LCD_delay_ms
 	
 	call	GetDigits
 	
 	movf	DIG3, W
-	;cpfseq	current_dig
+	; Want to check if the digit is within +- 1, if so skip
 	subwf	current_dig, W
 	bz	measure_loop
+
+	addlw	0x1
+	bz	measure_loop
+	sublw	0x2
+	bz	measure_loop
+	; If different by +-1 then we print new one
 	call	run
 	call	measure_loop
 
