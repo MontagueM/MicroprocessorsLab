@@ -49,16 +49,12 @@ LCD_Setup:
 	call	LCD_delay_x4us
 	return
 
-LCD_Clear_Display:
+LCD_Clear_Display: 
 	movlw	00000001B	; display clear
 	call	LCD_Send_Byte_I
 	movlw	2		; wait 2ms
 	call	LCD_delay_ms
-	movlw	00000110B	; entry mode incr by 1 no shift
-	call	LCD_Send_Byte_I
-	movlw	10		; wait 40us
-	call	LCD_delay_x4us
-	return
+	return	
 	
 LCD_Write_Hex:			; Writes byte stored in W as hex
 	movwf	LCD_hex_tmp, A

@@ -7,7 +7,7 @@ extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
 delay_count:ds 1    ; reserve one byte for counter in the delay routine
-
+;current_dig:ds 1
     
 psect	udata_bank4 ; reserve data anywhere in RAM (here at 0x400)
 myArray:    ds 0x80 ; reserve 128 bytes for message data
@@ -32,6 +32,7 @@ myTable:
 	DIG1	EQU 0x31
 	DIG2	EQU 0x32
 	DIG3	EQU 0x33
+	current_dig EQU 0x40
     
 psect	code, abs	
 rst: 	org 0x0
@@ -48,15 +49,13 @@ setup:	bcf	CFGS	; point to Flash program memory
 	;call	SetupMultiply8x24
 	;call	Multiply8x24
 	;goto	gend
+	movlw	0xff
+	movwf	current_dig
 	goto	start
 
 SetupMultiply16x16:
 	movff	ADRESL, ARG1L	
 	movff	ADRESH, ARG1H
-	;movlw	0xd2
-	;movwf	ARG1L
-	;movlw	0x04
-	;movwf	ARG1H
 	movlw	0x02
 	movwf	ARG2L
 	movlw	0x10
@@ -174,47 +173,26 @@ GetDigits:
 	addwf	DIG1, F
 	addwf	DIG2, F
 	addwf	DIG3, F
-	
+	return
 
 	; ******* Main programme ****************************************
-start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
-	movlw	low highword(myTable)	; address of data in PM
-	movwf	TBLPTRU, A		; load upper bits to TBLPTRU
-	movlw	high(myTable)	; address of data in PM
-	movwf	TBLPTRH, A		; load high byte to TBLPTRH
-	movlw	low(myTable)	; address of data in PM
-	movwf	TBLPTRL, A		; load low byte to TBLPTRL
-	movlw	myTable_l	; bytes to read
-	movwf 	counter, A		; our counter register
-	
-	; Calculate digits from hex value
-	;call	GetDigits
+start: 	
 	call	measure_loop
 	call	gend
-	
-	
-loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
-	movff	TABLAT, POSTINC0; move data from TABLAT to (FSR0), inc FSR0	
-	decfsz	counter, A		; count down to zero
-	bra	loop		; keep going until finished
-		
-	movlw	myTable_l	; output message to UART
-	lfsr	2, myArray
-	call	UART_Transmit_Message
-
-	movlw	myTable_l	; output message to LCD
-				; don't send the final carriage return to LCD
-	movlw	4
-	lfsr	2, DIG0
-	call	LCD_Write_Message
-	
-measure_loop:
-	call	ADC_Read
-	
-	call	GetDigits
-	
-	call	LCD_Setup
+run:
+    	;movlw	100
+	;call	LCD_delay_ms
+    	call	LCD_Clear_Display
+	;movlw	100
+	;call	LCD_delay_ms
+	;nop
+	;nop
+	; Reset temp to new dig1 value
+	movff	DIG3, current_dig
+   
 	movf	DIG0, W	
+	call	LCD_Send_Byte_D
+	movlw	0x2e	; dot for floating point
 	call	LCD_Send_Byte_D
 	movf	DIG1, W	
 	call	LCD_Send_Byte_D
@@ -222,14 +200,25 @@ measure_loop:
 	call	LCD_Send_Byte_D
 	movf	DIG3, W	
 	call	LCD_Send_Byte_D
-	movlw	2000
-	call	LCD_delay_ms
-	goto	gend
-	;goto	measure_loop		; goto current line in code
-	
-	; a delay subroutine if you need one, times around loop in delay_count
-delay:	decfsz	delay_count, A	; decrement until zero
-	bra	delay
+	movlw	0x56	; V for voltage
+	call	LCD_Send_Byte_D
+    	;movlw	100
+	;call	LCD_delay_ms
 	return
+
+measure_loop:
+	call	ADC_Read
+	movlw	200
+	call	LCD_delay_ms
+	
+	call	GetDigits
+	
+	movf	DIG3, W
+	;cpfseq	current_dig
+	subwf	current_dig, W
+	bz	measure_loop
+	call	run
+	call	measure_loop
+
 gend:
 	end	rst

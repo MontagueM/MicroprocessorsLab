@@ -19,6 +19,7 @@ ADC_Setup:
 
 ADC_Read:
 	bsf	GO	    ; Start conversion by setting GO bit in ADCON0
+	return
 adc_loop:
 	btfsc   GO	    ; check to see if finished
 	bra	adc_loop
