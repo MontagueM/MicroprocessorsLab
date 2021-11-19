@@ -1,7 +1,7 @@
 #include <xc.inc>
 
 extrn	UART_Setup, UART_Transmit_Message  ; external uart subroutines
-extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex ; external LCD subroutines
+extrn	LCD_Setup, LCD_Write_Message, LCD_Send_Byte_D, LCD_Write_Hex, LCD_Clear_Display, LCD_delay_ms ; external LCD subroutines
 extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
 	
 psect	udata_acs   ; reserve data space in access ram
@@ -53,9 +53,13 @@ setup:	bcf	CFGS	; point to Flash program memory
 SetupMultiply16x16:
 	movff	ADRESL, ARG1L	
 	movff	ADRESH, ARG1H
-	movlw	0x8a
+	;movlw	0xd2
+	;movwf	ARG1L
+	;movlw	0x04
+	;movwf	ARG1H
+	movlw	0x02
 	movwf	ARG2L
-	movlw	0x41
+	movlw	0x10
 	movwf	ARG2H
 	return
 
@@ -184,7 +188,8 @@ start: 	lfsr	0, myArray	; Load FSR0 with address in RAM
 	movwf 	counter, A		; our counter register
 	
 	; Calculate digits from hex value
-	call	GetDigits
+	;call	GetDigits
+	call	measure_loop
 	call	gend
 	
 	
@@ -207,12 +212,20 @@ measure_loop:
 	call	ADC_Read
 	
 	call	GetDigits
-	   
-	movlw	4
-	lfsr	2, DIG0
-	call	LCD_Write_Message
 	
-	goto	measure_loop		; goto current line in code
+	call	LCD_Setup
+	movf	DIG0, W	
+	call	LCD_Send_Byte_D
+	movf	DIG1, W	
+	call	LCD_Send_Byte_D
+	movf	DIG2, W	
+	call	LCD_Send_Byte_D
+	movf	DIG3, W	
+	call	LCD_Send_Byte_D
+	movlw	2000
+	call	LCD_delay_ms
+	goto	gend
+	;goto	measure_loop		; goto current line in code
 	
 	; a delay subroutine if you need one, times around loop in delay_count
 delay:	decfsz	delay_count, A	; decrement until zero

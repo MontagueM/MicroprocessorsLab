@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-global  LCD_Setup, LCD_Write_Message, LCD_Write_Hex
+global  LCD_Setup, LCD_Write_Message, LCD_Send_Byte_D, LCD_Write_Hex, LCD_Clear_Display, LCD_delay_ms
 
 psect	udata_acs   ; named variables in access ram
 LCD_cnt_l:	ds 1	; reserve 1 byte for variable LCD_cnt_l
@@ -49,6 +49,17 @@ LCD_Setup:
 	call	LCD_delay_x4us
 	return
 
+LCD_Clear_Display:
+	movlw	00000001B	; display clear
+	call	LCD_Send_Byte_I
+	movlw	2		; wait 2ms
+	call	LCD_delay_ms
+	movlw	00000110B	; entry mode incr by 1 no shift
+	call	LCD_Send_Byte_I
+	movlw	10		; wait 40us
+	call	LCD_delay_x4us
+	return
+	
 LCD_Write_Hex:			; Writes byte stored in W as hex
 	movwf	LCD_hex_tmp, A
 	swapf	LCD_hex_tmp, W, A	; high nibble first
@@ -72,8 +83,8 @@ LCD_Loop_message:
 	call    LCD_Send_Byte_D
 	decfsz  LCD_counter, A
 	bra	LCD_Loop_message
-	movlw	5000
-	call LCD_delay_ms
+	;movlw	5000
+	;call LCD_delay_ms
 	return
 
 LCD_Send_Byte_I:	    ; Transmits byte stored in W to instruction reg
